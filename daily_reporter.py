@@ -19,11 +19,8 @@ def send_wechat(user_index, msg):
     requests.get(wechat_url)
 
 
-def report(user_index):
+def report(user_index, try_times):
     """Report for one user"""
-    print('[Info] ' + 'Reporting for user ' + str(user_index + 1), end=', ')
-    print('username: ' + config.users[user_index]['username'])
-
     today = time.localtime(time.time())
     print('[Info]', 'Now:', time.asctime(today))
 
@@ -64,7 +61,8 @@ def report(user_index):
     except exceptions.NoSuchElementException:
         print('[Error] Login failed')
         if config.users[user_index]['use_wechat']:
-            send_wechat(user_index, strings.get_msg_failed(user_index))
+            if try_times == config.retry_times:
+                send_wechat(user_index, strings.get_msg_failed(user_index, try_times))
         browser.quit()
         return 1
 
@@ -145,7 +143,8 @@ def report(user_index):
     except IndexError:
         print('[Error] Submit failed')
         if config.users[user_index]['use_wechat']:
-            send_wechat(user_index, strings.get_msg_failed(user_index))
+            if try_times == config.retry_times:
+                send_wechat(user_index, strings.get_msg_failed(user_index, try_times))
         browser.quit()
         return 1
 
@@ -172,7 +171,8 @@ def report(user_index):
     except exceptions.NoSuchElementException:
         print('[Error] Submit timeout')
         if config.users[user_index]['use_wechat']:
-            send_wechat(user_index, strings.get_msg_failed(user_index))
+            if try_times == config.retry_times:
+                send_wechat(user_index, strings.get_msg_failed(user_index, try_times))
         browser.quit()
         return 1
 
@@ -198,7 +198,8 @@ def report(user_index):
     if txt.find(strings.msg['success_msg']) == -1:
         print('[Error] Check failed')
         if config.users[user_index]['use_wechat']:
-            send_wechat(user_index, strings.get_msg_failed(user_index))
+            if try_times == config.retry_times:
+                send_wechat(user_index, strings.get_msg_failed(user_index, try_times))
         browser.quit()
         return 1
 
@@ -216,7 +217,7 @@ def report(user_index):
     print('[Info] ' + 'Date: ' + date + ', Rank: ' + str(rank))
     if config.users[user_index]['use_wechat']:
         send_wechat(user_index, strings.get_msg_success(
-            user_index, date, rank, temperature))
+            user_index, date, rank, temperature, try_times))
     time.sleep(1)
 
     browser.quit()
@@ -228,9 +229,11 @@ def run():
     print('[Info] Task started\n')
 
     for user_index in range(len(config.users)):
-        for i in range(5):
+        print('[Info] Reporting for user ' + str(user_index + 1), end=', ')
+        print('username: ' + config.users[user_index]['username'])
+        for i in range(config.retry_times):
             print('[Info] Trying # ' + str(i + 1))
-            res = report(user_index)
+            res = report(user_index, i + 1)
             if res == 0:
                 break
         print()
